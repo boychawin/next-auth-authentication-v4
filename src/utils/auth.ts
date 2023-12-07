@@ -4,6 +4,14 @@ import prisma from "./prisma";
 import CredentialsProvider from "next-auth/providers/credentials";
 const VERCEL_DEPLOYMENT = !!process.env.VERCEL_URL;
 import { compare, hash } from 'bcrypt'
+import { z } from 'zod';
+import { User } from "@prisma/client";
+
+const loginUserSchema = z.object({
+  username: z.string().regex(/^[a-z0-9_-]{3,15}$/g, 'Invalid username'),
+  password: z.string().min(5, 'Password should be minimum 5 characters'),
+});
+
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -11,46 +19,24 @@ export const authOptions: NextAuthOptions = {
       type: "credentials",
       name: 'Credential',
       credentials: {
-        username: {
-          label: 'Username',
-          type: 'text',
-          placeholder: 'test',
-        },
-        password: { label: 'Password', type: 'password' },
+        username: { type: 'text', placeholder: 'test@test.com' },
+        password: { type: 'password', placeholder: 'Pa$$w0rd' },
       },
-      
-      async authorize(credentials, req) {
-        // const { username, password } = credentials as {
-        //   username: string
-        //   password: string
-        // }
+      async authorize(credentials) {
 
-        console.log({credentials,req})
-        return null
-        // const { user } = await grafbase.request(GetUserByUsername, {
-        //   username,
-        // })
+        const { username, password } = loginUserSchema.parse(credentials);
+        const user = await prisma.user.findFirst({
+          where: { username },
+          select:{id:true,name:true,email:true,password:true}
+        });
+        if (!user) return null;
 
-        // if (!user) {
-        //   const { userCreate } = await grafbase.request(CreateUserByUsername, {
-        //     username,
-        //     passwordHash: await hash(password, 12),
-        //   })
+        const isPasswordValid = await compare(password, user.password);
 
-        //   return {
-        //     id: userCreate.id,
-        //     username,
-        //   }
-        // }
+        if (!isPasswordValid) return null;
 
-        // const isValid = await compare(password, user.passwordHash)
-
-        // if (!isValid) {
-        //   throw new Error('Wrong credentials. Try again.')
-        // }
-
-        // return user
-      }
+        return { id: String(user.id), name: user.name, email: user.email };
+      },
     })
   ],
   secret: process.env.NEXT_PUBLIC_SECRET,
@@ -61,8 +47,7 @@ export const authOptions: NextAuthOptions = {
     verifyRequest: '/login', // (used for check email message)
     newUser: '/' // New users will be directed here on first sign in (leave the property out if not of interest)
   },
-  // adapter: PrismaAdapter(prisma),
-  session: { strategy: "jwt" },
+  adapter: PrismaAdapter(prisma),
   // cookies: {
   //   sessionToken: {
   //     name: `${VERCEL_DEPLOYMENT ? "__Secure-" : ""}next-auth.session-token`,
@@ -78,63 +63,28 @@ export const authOptions: NextAuthOptions = {
   //     },
   //   },
   // },
+  session: {
+    strategy: 'jwt',
+    maxAge: 30 * 24 * 60 * 60, // 30 days
+    updateAge: 24 * 60 * 60, // 24 hours
+  },
+
   callbacks: {
-    signIn: async ({ user, account }: any) => {
-      console.log({ user, account })
-      return true
-      // try {
-      //   // Check if the user already exists in the database
-      //   const existingUser = await prisma.account.findFirst({
-      //     where: { userId: user.id },
-      //   });
-
-      //   if (existingUser) {
-      //     // Update user data if needed
-      //     await prisma.account.update({
-      //       where: { id: existingUser.id },
-      //       data: {
-      //         access_token: account.access_token,
-      //         expires_at: account.expires_at,
-      //         refresh_token: account.refresh_token,
-      //         refresh_token_expires_in: account.refresh_token_expires_in,
-      //         token_type: account.token_type,
-      //         scope: account.scope
-      //       },
-      //     });
-
-
-      //   }
-
-      //   return true;
-      // } catch (error) {
-      //   return false;
-      // }
-    },
-    redirect: async ({ url, baseUrl }) => {
-      return baseUrl
-    },
-    jwt: async ({ token, user, account }) => {
-      if (user) {
-        token.user = user;
-      }
-      return token;
-    },
-    session: async ({ session, token }) => {
-
+    session({ session, token }) {
       const id = token.sub!
-      // const user = await getUserById(id)
 
       session.user = {
         ...session.user,
         // @ts-expect-error
         id: id,
-        // name: user?.name,
-        // email: user?.email,
-        // gh_username: user?.gh_username,
-        // @ts-expect-error
-        username: token?.user?.username || token?.user?.gh_username,
       };
       return session;
+    },
+    jwt({ token, user }) {
+      if (user) {
+        token.user = user;
+      }
+      return token;
     },
   },
 };
@@ -145,9 +95,7 @@ export function getSession() {
       id: string;
       name: string;
       username: string;
-      gh_username: string;
       email: string;
-      image: string;
     };
   } | null>;
 }
