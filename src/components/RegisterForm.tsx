@@ -1,5 +1,4 @@
 "use client"
-import { signIn } from "next-auth/react";
 import { FormButton } from "./FormButton";
 import { createUser } from "@/utils/action";
 
@@ -10,7 +9,6 @@ export default function RegisterForm() {
       if (res.error) {
         alert(res.error)
       } else {
-        console.log(res)
         alert('success')
       }
     })

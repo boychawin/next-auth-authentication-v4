@@ -5,15 +5,11 @@ import { getSession } from "@/utils/auth";
 import { notFound, redirect } from "next/navigation";
 
 export default async function Page() {
-
-
   const session = await getSession();
-
 
   if (!session?.user) {
     redirect("/login");
   }
-
 
   const [user] = await Promise.all([getUserById(Number(session.user.id))]);
 

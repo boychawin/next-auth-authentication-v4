@@ -2,7 +2,7 @@ import { getServerSession, type NextAuthOptions } from "next-auth";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "./prisma";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { compare, hash } from 'bcrypt'
+import { compare } from 'bcrypt'
 import { z } from 'zod';
 
 const loginUserSchema = z.object({
@@ -22,18 +22,24 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
 
-        const { username, password } = loginUserSchema.parse(credentials);
-        const user = await prisma.user.findFirst({
-          where: { username },
-          select: { id: true, name: true, email: true, password: true, role: true, username: true }
-        });
-        if (!user) return null;
+        try {
+          const { username, password } = loginUserSchema.parse(credentials);
+          const user = await prisma.user.findFirst({
+            where: { username },
+            select: { id: true, name: true, email: true, password: true, role: true, username: true }
+          });
+          if (!user) return null;
 
-        const isPasswordValid = await compare(password, user.password);
+          const isPasswordValid = await compare(password, user.password);
 
-        if (!isPasswordValid) return null;
+          if (!isPasswordValid) return null;
 
-        return { ...user,id: String(user.id), };
+          return { ...user, id: String(user.id), };
+        } catch (error: unknown) {
+          return null
+        }
+
+
       },
     })
   ],
