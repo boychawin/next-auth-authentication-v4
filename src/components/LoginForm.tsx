@@ -1,31 +1,34 @@
 "use client"
 import { signIn } from "next-auth/react";
 import { FormButton } from "./FormButton";
-import { useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { redirect } from "next/navigation";
+import { useState } from "react";
 
 export default function LoginForm() {
 
 
-  const searchParams = useSearchParams();
-  const error = searchParams?.get("error");
-
-  useEffect(() => {
-    const errorMessage = Array.isArray(error) ? error.pop() : error;
-    errorMessage && alert("Username or Password")
-  }, [error]);
-
-
+  const [errorMessage, setError] = useState<string | null>(null)
 
   const handleSubmit = async (formData: FormData) => {
     const username = formData.get("username") as string;
     const password = formData.get("password") as string;
 
-    await signIn('credentials', {
+
+    const { error, status, ok, url }: any = await signIn('credentials', {
       username: username,
       password: password,
-      callbackUrl: '/',
+      redirect: false,
+      callbackUrl: '/profile',
     });
+
+    if (error) {
+      setError("Username or Password is incorrect")
+      console.error(error)
+    }
+
+    if (status == 200 && ok) {
+      redirect(url)
+    }
 
   }
   return (
@@ -52,7 +55,10 @@ export default function LoginForm() {
         />
       </div>
       <div>
-        <FormButton  >Login</FormButton>    
+        {!!errorMessage && <p className="text-red-500">{errorMessage}</p>}
+      </div>
+      <div>
+        <FormButton  >Login</FormButton>
       </div>
     </form>
   );

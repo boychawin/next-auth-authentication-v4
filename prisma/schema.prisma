@@ -15,8 +15,16 @@ model User {
   name     String?
   username String
   password String
-  // posts    Post[]
+  role    Role?      @default(USER)
 }
+
+
+enum Role {
+  USER
+  ADMIN
+  HR
+}
+
 
 // model Post {
 //   id        Int     @id @default(autoincrement())

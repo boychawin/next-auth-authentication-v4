@@ -12,6 +12,6 @@ export const getUserById = cache(async (id:number) =>{
       id: id, 
     },
   }).catch((err)=>{
-    return null
+    return err
   })
 })

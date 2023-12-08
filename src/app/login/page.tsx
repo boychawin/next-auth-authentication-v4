@@ -1,6 +1,6 @@
 import LoginForm from "@/components/LoginForm";
-import Profile from "@/components/Profile";
 import { getSession } from "@/utils/auth";
+import { redirect } from "next/navigation";
 
 export default async function Page() {
 
@@ -8,7 +8,7 @@ export default async function Page() {
   const session = await getSession();
 
   if (session?.user) {
-    return <Profile session={session} user={null}/>
+    redirect("/profile");
   }
 
   return (
@@ -18,7 +18,6 @@ export default async function Page() {
         <p className="mt-2">
           Not registered yet? <a className=" hover:underline text-sm" href='/register'>Register here</a>
         </p>
-
       </div>
     </>
   )

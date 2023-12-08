@@ -2,10 +2,8 @@ import { getServerSession, type NextAuthOptions } from "next-auth";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "./prisma";
 import CredentialsProvider from "next-auth/providers/credentials";
-const VERCEL_DEPLOYMENT = !!process.env.VERCEL_URL;
 import { compare, hash } from 'bcrypt'
 import { z } from 'zod';
-import { User } from "@prisma/client";
 
 const loginUserSchema = z.object({
   username: z.string().regex(/^[a-z0-9_-]{3,15}$/g, 'Invalid username'),
@@ -20,14 +18,14 @@ export const authOptions: NextAuthOptions = {
       name: 'Credential',
       credentials: {
         username: { type: 'text', placeholder: 'test@test.com' },
-        password: { type: 'password', placeholder: 'Pa$$w0rd' },
+        password: { type: 'password', placeholder: 'Password' },
       },
       async authorize(credentials) {
 
         const { username, password } = loginUserSchema.parse(credentials);
         const user = await prisma.user.findFirst({
           where: { username },
-          select:{id:true,name:true,email:true,password:true}
+          select: { id: true, name: true, email: true, password: true, role: true, username: true }
         });
         if (!user) return null;
 
@@ -35,7 +33,7 @@ export const authOptions: NextAuthOptions = {
 
         if (!isPasswordValid) return null;
 
-        return { id: String(user.id), name: user.name, email: user.email };
+        return { ...user,id: String(user.id), };
       },
     })
   ],
@@ -43,26 +41,11 @@ export const authOptions: NextAuthOptions = {
   pages: {
     signIn: '/',
     signOut: '/login',
-    error: '/error', // Error code passed in query string as ?error=
-    verifyRequest: '/login', // (used for check email message)
-    newUser: '/' // New users will be directed here on first sign in (leave the property out if not of interest)
+    error: '/error',
+    verifyRequest: '/login',
+    newUser: '/'
   },
   adapter: PrismaAdapter(prisma),
-  // cookies: {
-  //   sessionToken: {
-  //     name: `${VERCEL_DEPLOYMENT ? "__Secure-" : ""}next-auth.session-token`,
-  //     options: {
-  //       httpOnly: true,
-  //       sameSite: "lax",
-  //       path: "/",
-  //       // When working on localhost, the cookie domain must be omitted entirely (https://stackoverflow.com/a/1188145)
-  //       domain: VERCEL_DEPLOYMENT
-  //         ? `.${process.env.NEXT_PUBLIC_ROOT_DOMAIN}`
-  //         : undefined,
-  //       secure: VERCEL_DEPLOYMENT,
-  //     },
-  //   },
-  // },
   session: {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days
@@ -71,12 +54,14 @@ export const authOptions: NextAuthOptions = {
 
   callbacks: {
     session({ session, token }) {
-      const id = token.sub!
-
       session.user = {
         ...session.user,
         // @ts-expect-error
-        id: id,
+        id: token.sub!,
+        // @ts-expect-error
+        role: token.user.role!,
+        // @ts-expect-error
+        username: token.user.username!
       };
       return session;
     },
@@ -96,6 +81,7 @@ export function getSession() {
       name: string;
       username: string;
       email: string;
+      role: string;
     };
   } | null>;
 }
