@@ -1,12 +1,12 @@
 "use server";
-import { ZodError, z } from "zod";
+// import { ZodError, z } from "zod";
 import prisma from "./prisma";
 import { hash } from "bcrypt";
 
-const registerUserSchema = z.object({
-  username: z.string().regex(/^[a-z0-9_-]{3,15}$/g, 'Invalid username'),
-  password: z.string().min(5, 'Password should be minimum 5 characters'),
-});
+// const registerUserSchema = z.object({
+//   username: z.string().regex(/^[a-z0-9_-]{3,15}$/g, 'Invalid username'),
+//   password: z.string().min(5, 'Password should be minimum 5 characters'),
+// });
 
 
 export const createUser = async (data: FormData) => {
@@ -21,20 +21,16 @@ export const createUser = async (data: FormData) => {
   const email = data.get("email") as string;
   const name = data.get("name") as string;
 
-  try {
-    registerUserSchema.parse({ username, password });
-  } catch (error: unknown) {
-    if (error instanceof ZodError) {
-      console.log(error?.errors)
-      return {
-        error: error?.errors[0]?.message
-      };
-    }
-  }
-
-
-
-  // const { username, password } = registerUserSchema.parse({ username: usernameInput, password: passwordInput });
+  // try {
+  //   registerUserSchema.parse({ username, password });
+  // } catch (error: unknown) {
+  //   if (error instanceof ZodError) {
+  //     console.log(error?.errors)
+  //     return {
+  //       error: error?.errors[0]?.message
+  //     };
+  //   }
+  // }
 
   const user = await prisma.user.findFirst({
     where: { username },

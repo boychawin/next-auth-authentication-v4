@@ -3,12 +3,12 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "./prisma";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { compare } from 'bcrypt'
-import { z } from 'zod';
+// import { z } from 'zod';
 
-const loginUserSchema = z.object({
-  username: z.string().regex(/^[a-z0-9_-]{3,15}$/g, 'Invalid username'),
-  password: z.string().min(5, 'Password should be minimum 5 characters'),
-});
+// const loginUserSchema = z.object({
+//   username: z.string().regex(/^[a-z0-9_-]{3,15}$/g, 'Invalid username'),
+//   password: z.string().min(5, 'Password should be minimum 5 characters'),
+// });
 
 
 export const authOptions: NextAuthOptions = {
@@ -20,10 +20,10 @@ export const authOptions: NextAuthOptions = {
         username: { type: 'text', placeholder: 'test@test.com' },
         password: { type: 'password', placeholder: 'Password' },
       },
-      async authorize(credentials) {
+      async authorize({ username, password }:any) {
 
         try {
-          const { username, password } = loginUserSchema.parse(credentials);
+          // const { username, password } = loginUserSchema.parse(credentials);
           const user = await prisma.user.findFirst({
             where: { username },
             select: { id: true, name: true, email: true, password: true, role: true, username: true }
